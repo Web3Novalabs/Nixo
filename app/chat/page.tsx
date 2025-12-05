@@ -11,6 +11,7 @@ import {
   Copy,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import Chatbot from "@/components/chats/chatbot";
 import BalanceSkeleton from "@/components/chats/balance-skeleton";
 
@@ -37,8 +38,18 @@ export default function AppPage() {
     setWalletAddress("");
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(walletAddress);
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(walletAddress);
+      toast.success("Address copied!", {
+        description: "Wallet address copied to clipboard",
+      });
+    } catch (error) {
+      toast.error("Failed to copy", {
+        description: "Please try again or copy manually",
+      });
+      console.error("Failed to copy address:", error);
+    }
   };
 
   return (
@@ -65,12 +76,12 @@ export default function AppPage() {
               Back to Home
             </Link>
 
-            <h1 className="text-2xl font-bold text-purple-400">Typhoon</h1>
+            <h1 className="text-2xl font-bold text-purple-400">Nixo</h1>
 
             {isWalletConnected ? (
               <button
                 onClick={handleDisconnect}
-                className="flex items-center gap-2 bg-red-950/40 hover:bg-red-950/60 text-red-400 px-4 py-2 rounded-lg transition-colors border border-red-900/50 font-medium"
+                className="flex items-center gap-2 bg-red-950/40 hover:bg-red-950/60 text-red-400 px-4 py-2 rounded-lg transition-colors border border-red-900/50 font-medium cursor-pointer"
               >
                 <LogOut size={16} />
                 Disconnect
@@ -102,7 +113,7 @@ export default function AppPage() {
                 </h2>
                 <p className="text-slate-300 mb-8 leading-relaxed">
                   Connect your Starknet wallet to start making anonymous,
-                  gasless transfers with Typhoon.
+                  gasless transfers with Nixo.
                 </p>
 
                 <button

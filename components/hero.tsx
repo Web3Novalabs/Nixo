@@ -14,7 +14,7 @@ export default function Hero() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
         <div className="text-center space-y-8 max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/40 bg-primary/8 hover:bg-primary/12 transition-all duration-300 cursor-pointer group">
-            <Sparkles className="w-4 h-4 text-primary group-hover:animate-spin" />
+            <Sparkles className="w-4 h-4 text-primary animate-spin" />
             <span className="text-sm font-medium text-primary">
               Privacy-First DeFi on Starknet
             </span>

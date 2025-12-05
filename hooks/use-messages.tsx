@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { toast } from "sonner";
 import { handleUserMessage, type MessageContext } from "@/lib/message-handler";
 
 export interface Message {
@@ -38,9 +39,19 @@ export function useMessages(context: MessageContext) {
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
+      // Create timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Request timed out"));
+        }, 30000); // 30 second timeout
+      });
+
       try {
-        // Get AI response
-        const response = await handleUserMessage(userInput, context);
+        // Race between the actual request and timeout
+        const response = await Promise.race([
+          handleUserMessage(userInput, context),
+          timeoutPromise,
+        ]);
 
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -51,13 +62,30 @@ export function useMessages(context: MessageContext) {
 
         setMessages((prev) => [...prev, assistantMessage]);
       } catch (error) {
+        const isTimeout =
+          error instanceof Error && error.message === "Request timed out";
+
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: "assistant",
-          content: `Sorry, I encountered an error. Please try again.`,
+          content: isTimeout
+            ? "Sorry, the request timed out. Please try again."
+            : "Sorry, I encountered an error. Please try again.",
           timestamp: new Date(),
         };
+
         setMessages((prev) => [...prev, errorMessage]);
+
+        // Show toast notification
+        toast.error(
+          isTimeout
+            ? "Request timed out after 30 seconds"
+            : "Failed to process your message",
+          {
+            description: "Please try again or rephrase your request.",
+          }
+        );
+
         console.log(error);
       } finally {
         setIsLoading(false);

@@ -2,15 +2,16 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Typhoon - Anonymous Crypto Transfers with AI",
+  title: "Nixo - Anonymous Crypto Transfers with AI",
   description:
-    "Send crypto. Stay anonymous. No fees. Natural-language AI-powered private transfers powered by Starknet and Typhoon Protocol.",
+    "Send crypto. Stay anonymous. No fees. Natural-language AI-powered private transfers powered by Starknet and Nixo Protocol.",
   generator: "v0.app",
   icons: {
     icon: [
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans antialiased`}>
         {children}
+        <Toaster />
         <Analytics />
       </body>
     </html>

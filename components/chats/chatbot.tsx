@@ -53,7 +53,7 @@ export default function Chatbot({
     <div className="flex flex-col h-full bg-slate-950/60 backdrop-blur rounded-xl border border-purple-900/50 overflow-hidden shadow-lg">
       <div className="bg-purple-700 p-4 text-white font-semibold flex items-center gap-2">
         <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-        Typhoon AI Assistant
+        Nixo AI Assistant
       </div>
 
       {/* Messages Container */}
@@ -144,14 +144,14 @@ export default function Chatbot({
           <button
             type="submit"
             disabled={isLoading || !input.trim() || !walletConnected}
-            className="bg-purple-700 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-3 transition-all flex items-center justify-center gap-2 font-semibold"
+            className="bg-purple-700 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-3 transition-all flex items-center justify-center gap-2 font-semibold cursor-pointer"
           >
             {isLoading ? (
               <Loader size={18} className="animate-spin" />
             ) : (
               <Send size={18} />
             )}
-            <span className="hidden sm:inline">Send</span>
+            <span className="hidden sm:inline ">Send</span>
           </button>
         </div>
       </form>

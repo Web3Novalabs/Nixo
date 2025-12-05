@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CTA() {
@@ -21,20 +21,14 @@ export default function CTA() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 rounded-full px-10 font-semibold text-lg"
-          >
+          <button className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 rounded-xl px-7 font-semibold cursor-pointer py-3.5 flex items-center">
             Launch App Now
             <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-primary/50 hover:bg-primary/10 hover:border-primary transition-all duration-300 rounded-full px-10 font-semibold text-lg bg-transparent"
-          >
+          </button>
+
+          <button className="hover:border-[#8F7AFF] border transition-all duration-300 rounded-xl px-10 font-semibold cursor-pointer py-3.5 flex items-center">
             Read Docs
-          </Button>
+          </button>
         </div>
 
         <div className="mt-16 pt-16 border-t border-border/30">
