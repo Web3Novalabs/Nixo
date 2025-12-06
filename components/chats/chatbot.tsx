@@ -6,25 +6,31 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Loader } from "lucide-react";
 import { useMessages } from "@/hooks/use-messages";
 import SuggestedActions from "./suggested-actions";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 // import TransactionPreview from "./transaction-preview";
 
 interface ChatbotProps {
   walletConnected: boolean;
   walletAddress?: string;
+  balances?: { token: string; balance: string }[];
 }
 
 export default function Chatbot({
   walletConnected,
   walletAddress,
+  balances,
 }: ChatbotProps) {
   const { messages, isLoading, addMessage } = useMessages({
     isConnected: walletConnected,
     walletAddress,
+    balances,
   });
 
   const [input, setInput] = useState("");
   // const [showTransactionPreview, setShowTransactionPreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,6 +39,13 @@ export default function Chatbot({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Auto-focus input when wallet is connected
+  useEffect(() => {
+    if (walletConnected && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [walletConnected, messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,15 +93,48 @@ export default function Chatbot({
             } animate-in fade-in duration-300`}
           >
             <div
-              className={`max-w-xs lg:max-w-sm px-4 py-3 rounded-lg ${
+              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
                 message.type === "user"
                   ? "bg-purple-700 text-white rounded-br-none"
                   : "bg-slate-800/80 text-slate-100 rounded-bl-none border border-slate-700/50"
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                {message.content}
-              </p>
+              <div className="text-sm leading-relaxed break-words prose prose-invert prose-sm max-w-none">
+                {message.type === "assistant" ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a
+                          {...props}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-400 hover:text-purple-300 underline"
+                        />
+                      ),
+                      code: ({ node, inline, ...props }) =>
+                        inline ? (
+                          <code
+                            {...props}
+                            className="bg-slate-900/50 px-1.5 py-0.5 rounded text-purple-300 font-mono text-xs"
+                          />
+                        ) : (
+                          <code
+                            {...props}
+                            className="block bg-slate-900/50 p-3 rounded-lg overflow-x-auto font-mono text-xs my-2"
+                          />
+                        ),
+                      pre: ({ node, ...props }) => (
+                        <pre {...props} className="bg-slate-900/50 p-3 rounded-lg overflow-x-auto my-2" />
+                      ),
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                ) : (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                )}
+              </div>
               <p
                 className={`text-xs mt-2 ${
                   message.type === "user"
@@ -114,7 +160,7 @@ export default function Chatbot({
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-100" />
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-200" />
                 </div>
-                <span className="text-sm">Processing...</span>
+                <span className="text-sm">Thinking...</span>
               </div>
             </div>
           </div>
@@ -130,6 +176,7 @@ export default function Chatbot({
       >
         <div className="flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}

@@ -2,13 +2,20 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { handleUserMessage, type MessageContext } from "@/lib/message-handler";
+import type { TransactionIntent } from "@/lib/ai-service";
 
 export interface Message {
   id: string;
   type: "user" | "assistant";
   content: string;
   timestamp: Date;
+  streaming?: boolean;
+}
+
+interface MessageContext {
+  isConnected: boolean;
+  walletAddress?: string;
+  balances?: { token: string; balance: string }[];
 }
 
 export function useMessages(context: MessageContext) {
@@ -17,12 +24,13 @@ export function useMessages(context: MessageContext) {
       id: "1",
       type: "assistant",
       content:
-        "Hey there! I'm your anonymous transaction assistant. Ask me anything - like 'What's my balance?' or 'Send 10 STRK to 0x...'",
+        "Hey there! 👋 I'm your privacy-focused DeFi assistant powered by Typhoon Protocol.\n\nI can help you:\n🔍 Check your token balances\n🔒 Make anonymous transfers\n💬 Answer questions about privacy\n\nJust ask me anything like 'What's my balance?' or 'Send 10 STRK to 0x...'",
       timestamp: new Date(),
     },
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [currentIntent, setCurrentIntent] = useState<TransactionIntent | null>(null);
 
   const addMessage = useCallback(
     async (userInput: string) => {
@@ -39,54 +47,122 @@ export function useMessages(context: MessageContext) {
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
-      // Create timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error("Request timed out"));
-        }, 30000); // 30 second timeout
-      });
+      // Create placeholder for streaming message
+      const assistantMessageId = (Date.now() + 1).toString();
+      const assistantMessage: Message = {
+        id: assistantMessageId,
+        type: "assistant",
+        content: "",
+        timestamp: new Date(),
+        streaming: true,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
 
       try {
-        // Race between the actual request and timeout
-        const response = await Promise.race([
-          handleUserMessage(userInput, context),
-          timeoutPromise,
-        ]);
+        // Use balances from context (already fetched via useTokenBalances hook)
+        const balances = context.balances || [];
 
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: "assistant",
-          content: response,
-          timestamp: new Date(),
-        };
+        // Call AI API with streaming
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userInput,
+            walletAddress: context.walletAddress,
+            balances,
+          }),
+        });
 
-        setMessages((prev) => [...prev, assistantMessage]);
-      } catch (error) {
-        const isTimeout =
-          error instanceof Error && error.message === "Request timed out";
+        if (!response.ok) {
+          throw new Error("Failed to get AI response");
+        }
 
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: "assistant",
-          content: isTimeout
-            ? "Sorry, the request timed out. Please try again."
-            : "Sorry, I encountered an error. Please try again.",
-          timestamp: new Date(),
-        };
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
 
-        setMessages((prev) => [...prev, errorMessage]);
+        if (!reader) {
+          throw new Error("No response stream");
+        }
 
-        // Show toast notification
-        toast.error(
-          isTimeout
-            ? "Request timed out after 30 seconds"
-            : "Failed to process your message",
-          {
-            description: "Please try again or rephrase your request.",
+        let fullContent = "";
+        let intent: TransactionIntent | null = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              
+              if (data === "[DONE]") {
+                break;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                
+                if (parsed.content) {
+                  fullContent += parsed.content;
+                  
+                  // Update message with streaming content
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: fullContent }
+                        : msg
+                    )
+                  );
+                }
+
+                if (parsed.intent) {
+                  intent = parsed.intent;
+                  setCurrentIntent(intent);
+                }
+              } catch (e) {
+                // Ignore parse errors for incomplete chunks
+              }
+            }
           }
+        }
+
+        // Mark streaming as complete
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? { ...msg, streaming: false }
+              : msg
+          )
         );
 
-        console.log(error);
+        // Handle transaction intent if present
+        if (intent && intent.type === "transfer" && intent.confidence > 0.7) {
+          // Transaction will be handled by the chatbot component
+          console.log("Transaction intent detected:", intent);
+        }
+
+      } catch (error) {
+        console.error("Message error:", error);
+        
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: "Sorry, I encountered an error processing your request. Please try again.",
+                  streaming: false,
+                }
+              : msg
+          )
+        );
+
+        toast.error("Failed to process your message", {
+          description: "Please try again or rephrase your request.",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -94,5 +170,5 @@ export function useMessages(context: MessageContext) {
     [context]
   );
 
-  return { messages, isLoading, addMessage };
+  return { messages, isLoading, addMessage, currentIntent };
 }
