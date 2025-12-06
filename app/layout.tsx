@@ -6,8 +6,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { StarknetProvider } from "@/components/starknet-provider";
 import "./globals.css";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+});
+const geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Nixo - Anonymous Crypto Transfers with AI",
@@ -40,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
+      <body className={`${geist.variable} font-sans antialiased`}>
         <StarknetProvider>
           {children}
           <Toaster />

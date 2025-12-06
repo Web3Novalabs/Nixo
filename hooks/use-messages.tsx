@@ -191,5 +191,19 @@ export function useMessages(context: MessageContext) {
     [context]
   );
 
-  return { messages, isLoading, addMessage, currentIntent };
+  const addAssistantMessage = useCallback((content: string) => {
+    const message: Message = {
+      id: Date.now().toString(),
+      type: "assistant",
+      content,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, message]);
+  }, []);
+
+  const clearIntent = useCallback(() => {
+    setCurrentIntent(null);
+  }, []);
+
+  return { messages, isLoading, addMessage, addAssistantMessage, currentIntent, clearIntent };
 }

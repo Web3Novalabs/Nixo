@@ -18,19 +18,38 @@ export interface AIResponse {
   intent: TransactionIntent;
 }
 
-const SYSTEM_PROMPT = `You are Nixo AI, a knowledgeable blockchain and DeFi assistant specializing in privacy-focused anonymous transfers on Starknet using Typhoon Protocol.
+const SYSTEM_PROMPT = `You are Nixo AI, a helpful assistant for the Typhoon Protocol - a privacy-focused DeFi platform on Starknet.
 
-RESPONSE STYLE:
-- Be EXTREMELY concise - 2-3 sentences max for SIMPLE responses (balance checks, confirmations, general questions)
-- For DEVELOPER/INTEGRATION questions: Provide FULL detailed code examples and explanations
-- Use emojis sparingly (only for key concepts)
-- Get straight to the point
-- Be friendly and educational
+**Your Role:**
+- Help users understand Typhoon Protocol and private transfers
+- Guide users through anonymous transactions
+- Answer questions about Starknet, DeFi, and crypto
+- Be friendly, concise, and helpful
 
-CORE CAPABILITIES:
-- Check balances (STRK, USDC, USDT)
-- Execute private transfers via Typhoon
-- Explain Typhoon Protocol with FULL code examples
+**Important Guidelines:**
+1. ONLY show balance information when the user explicitly asks for it (e.g., "show my balance", "what's my balance", "check balance")
+2. DO NOT include balance information in greetings or general responses
+3. When showing balances, format them as:
+   - STRK: X.XX
+   - USDC: X.XX
+   - USDT: X.XX
+
+**Transaction Detection:**
+When a user wants to send/transfer tokens, extract:
+- Amount (number)
+- Token (STRK, USDC, or USDT)
+- Recipient address (0x...)
+
+**Supported Tokens:**
+- STRK (Starknet Token)
+- USDC (USD Coin)
+- USDT (Tether USD)
+
+**Key Features:**
+- Minimum transfer: 10 tokens
+- Private & anonymous transfers
+- Powered by zero-knowledge proofs
+- No transaction history on-chain
 
 GENERAL KNOWLEDGE:
 - Answer questions about blockchain technology, cryptocurrencies, DeFi, Web3, and related tech topics
@@ -256,9 +275,11 @@ export async function* streamAIResponse(
     // Extract intent from complete message
     const intent = extractTransactionIntent(userMessage, fullMessage);
     return intent;
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI streaming error:", error);
-    yield "I'm having trouble processing your request right now. Please try again.";
+    yield `I'm having trouble processing your request. Error: ${
+      error?.message || "Unknown error"
+    }`;
     return { type: "none", confidence: 0 };
   }
 }
@@ -287,15 +308,17 @@ function extractTransactionIntent(
   if (hasTransferKeyword) {
     // Extract amount
     const amountMatch = userMessage.match(
-      /(\d+(?:\.\d+)?)\s*(strk|usdc|usdt)/i
+      /(\d+(?:\.\d+)?)\s*([a-zA-Z]{2,6})?/i
     );
     const amount = amountMatch ? parseFloat(amountMatch[1]) : undefined;
 
     // Extract token
-    const tokenMatch = userMessage.match(/\b(strk|usdc|usdt)\b/i);
-    const token = tokenMatch
-      ? (tokenMatch[1].toUpperCase() as TokenSymbol)
-      : undefined;
+    // Look for token symbol either after amount or standalone
+    const tokenMatch = userMessage.match(/\b([a-zA-Z]{2,6})\b/i);
+    // We cast to TokenSymbol here but validation will happen in the UI
+    const token = (amountMatch?.[2] || tokenMatch?.[1])?.toUpperCase() as
+      | TokenSymbol
+      | undefined;
 
     // Extract recipient address
     const addressMatch = userMessage.match(/0x[a-fA-F0-9]{63,64}/);

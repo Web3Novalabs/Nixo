@@ -1,5 +1,5 @@
 import { TyphoonSDK } from "typhoon-sdk";
-import type { AccountInterface } from "starknet";
+import { RpcProvider, AccountInterface } from "starknet";
 import { TOKEN_ADDRESSES, TOKEN_DECIMALS, type TokenSymbol } from "./tokens";
 
 export interface TransferParams {
@@ -8,14 +8,7 @@ export interface TransferParams {
   recipient: string;
 }
 
-export interface TransferResult {
-  success: boolean;
-  txHash?: string;
-  error?: string;
-}
-
 export type TransferStatus =
-  | "idle"
   | "generating"
   | "signing"
   | "downloading"
@@ -26,9 +19,15 @@ export type TransferStatus =
 
 export class TyphoonService {
   private sdk: TyphoonSDK;
+  private provider: RpcProvider;
 
   constructor() {
     this.sdk = new TyphoonSDK();
+    this.provider = new RpcProvider({
+      nodeUrl:
+        process.env.NEXT_PUBLIC_STARKNET_RPC_URL ||
+        "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+    });
   }
 
   /**
@@ -36,9 +35,14 @@ export class TyphoonService {
    */
   async executeTransfer(
     account: AccountInterface,
-    params: TransferParams,
-    onStatusChange?: (status: TransferStatus, message: string) => void
-  ): Promise<TransferResult> {
+    params: {
+      amount: number;
+      token: TokenSymbol;
+      recipient: string;
+    },
+    onStatusChange?: (status: TransferStatus, message: string) => void,
+    onChatMessage?: (message: string) => void
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const { amount, token, recipient } = params;
 
@@ -50,48 +54,93 @@ export class TyphoonService {
       const amountBigInt = BigInt(Math.floor(amount * 10 ** decimals));
 
       // Step 1: Generate approve and deposit calls
-      onStatusChange?.("generating", "Generating transaction calls...");
+      const generatingMsg = "Generating transaction calls...";
+      onStatusChange?.("generating", generatingMsg);
+      onChatMessage?.(`⏳ ${generatingMsg}`);
+
+      console.log("[Typhoon] Starting generate_approve_and_deposit_calls", {
+        amount: amountBigInt.toString(),
+        tokenAddress,
+      });
+
       const calls = await this.sdk.generate_approve_and_deposit_calls(
         amountBigInt,
         tokenAddress
       );
 
+      console.log("[Typhoon] Generated calls:", calls.length, "calls");
+
       // Step 2: Execute deposit (user signs in wallet)
-      onStatusChange?.(
-        "signing",
-        "Please sign the transaction in your wallet..."
+      const signingMsg = "Please sign the transaction in your wallet...";
+      onStatusChange?.("signing", signingMsg);
+      onChatMessage?.(`✍️ ${signingMsg}`);
+
+      console.log(
+        "[Typhoon] Requesting wallet signature for",
+        calls.length,
+        "calls"
       );
+
       const multiCall = await account.execute(calls);
       const txHash = multiCall.transaction_hash;
 
+      console.log("[Typhoon] Transaction signed, hash:", txHash);
+
       // Step 3: Download transaction note
-      onStatusChange?.(
-        "downloading",
-        "Downloading transaction note for recovery..."
-      );
+      const downloadingMsg = "Downloading transaction note for recovery...";
+      onStatusChange?.("downloading", downloadingMsg);
+      onChatMessage?.(`📥 ${downloadingMsg}`);
+
       await this.sdk.download_notes(txHash);
 
       // Step 4: Wait for confirmation
-      onStatusChange?.("confirming", "Waiting for transaction confirmation...");
+      const confirmingMsg = "Waiting for transaction confirmation...";
+      onStatusChange?.("confirming", confirmingMsg);
+      onChatMessage?.(`⏱️ ${confirmingMsg}`);
+
       await account.waitForTransaction(txHash);
 
       // Step 5: Withdraw to recipient
-      onStatusChange?.(
-        "withdrawing",
-        "Completing anonymous withdrawal to recipient..."
-      );
+      const withdrawingMsg = "Completing anonymous withdrawal to recipient...";
+      onStatusChange?.("withdrawing", withdrawingMsg);
+      onChatMessage?.(`🔒 ${withdrawingMsg}`);
+
       await this.sdk.withdraw(txHash, [recipient]);
 
-      onStatusChange?.("success", "Transfer completed successfully! 🎉");
+      const successMsg = "Transfer completed successfully! 🎉";
+      onStatusChange?.("success", successMsg);
+      onChatMessage?.(`✅ ${successMsg}`);
 
       return {
         success: true,
         txHash,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Typhoon transfer error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+
+      // Check if user rejected the transaction
+      const errorObj = error as { message?: string; code?: string };
+      const isUserRejection =
+        errorObj?.message?.includes("USER_REFUSED_OP") ||
+        errorObj?.message?.includes("User rejected") ||
+        errorObj?.message?.includes("User denied") ||
+        errorObj?.message?.includes("rejected") ||
+        errorObj?.code === "ACTION_REJECTED";
+
+      let errorMessage: string;
+      if (isUserRejection) {
+        errorMessage =
+          "Transaction cancelled - you rejected the signature request.";
+        onChatMessage?.(
+          `❌ **Transfer cancelled**\n\nYou rejected the transaction signature. No funds were transferred.`
+        );
+      } else {
+        errorMessage =
+          error instanceof Error ? error.message : "Unknown error occurred";
+        onChatMessage?.(
+          `❌ **Transfer failed**\n\nAn error occurred: ${errorMessage}`
+        );
+      }
 
       onStatusChange?.("error", `Transfer failed: ${errorMessage}`);
 
