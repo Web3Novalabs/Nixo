@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ArrowLeft,
-  Wallet,
-  LogOut,
-  Copy,
-  ChevronDown,
-} from "lucide-react";
+import { ArrowLeft, Wallet, LogOut, Copy, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
@@ -80,18 +74,23 @@ export default function AppPage() {
                   <div className="relative">
                     <button
                       onClick={() => setShowBalances(!showBalances)}
-                      className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/50 transition-colors text-sm"
+                      className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/50 transition-colors text-sm cursor-pointer"
                     >
                       <span className="text-slate-300">Balances</span>
                       <ChevronDown size={16} className="text-slate-400" />
                     </button>
-                    
+
                     {showBalances && (
                       <div className="absolute right-0 mt-2 w-48 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-lg shadow-xl p-3 space-y-2">
                         {balances.map((bal) => (
-                          <div key={bal.token} className="flex justify-between text-sm">
+                          <div
+                            key={bal.token}
+                            className="flex justify-between text-sm cursor-pointer hover:bg-slate-800/50 transition-colors rounded-xl"
+                          >
                             <span className="text-slate-400">{bal.token}:</span>
-                            <span className="text-white font-mono">{parseFloat(bal.balance).toFixed(2)}</span>
+                            <span className="text-white font-mono">
+                              {parseFloat(bal.balance).toFixed(2)}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -115,7 +114,7 @@ export default function AppPage() {
                   {/* Disconnect Button */}
                   <button
                     onClick={handleDisconnect}
-                    className="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-red-500/50 hover:bg-red-900/20 transition-colors"
+                    className="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-red-500/50 hover:bg-red-900/20 transition-colors cursor-pointer"
                     title="Disconnect"
                   >
                     <LogOut size={16} className="text-slate-400" />
@@ -124,7 +123,7 @@ export default function AppPage() {
               ) : (
                 <button
                   onClick={() => setShowWalletModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 transition-colors text-white font-semibold"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 transition-colors text-white font-semibold cursor-pointer"
                 >
                   <Wallet size={18} />
                   <span>Connect Wallet</span>
@@ -162,17 +161,18 @@ export default function AppPage() {
 
             <div className="space-y-3">
               {connectors.map((connector) => {
-                const iconUrl = typeof connector.icon === 'object' && connector.icon?.dark 
-                  ? connector.icon.dark 
-                  : typeof connector.icon === 'string' 
-                  ? connector.icon 
-                  : null;
+                const iconUrl =
+                  typeof connector.icon === "object" && connector.icon?.dark
+                    ? connector.icon.dark
+                    : typeof connector.icon === "string"
+                    ? connector.icon
+                    : null;
 
                 return (
                   <button
                     key={connector.id}
                     onClick={() => handleConnectWallet(connector)}
-                    className="w-full flex items-center gap-3 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/50 hover:bg-slate-800 transition-all group"
+                    className="w-full flex items-center gap-3 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/50 hover:bg-slate-800 transition-all group cursor-pointer"
                   >
                     {iconUrl && (
                       <img

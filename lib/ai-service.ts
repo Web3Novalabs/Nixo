@@ -18,18 +18,25 @@ export interface AIResponse {
   intent: TransactionIntent;
 }
 
-const SYSTEM_PROMPT = `You are Nixo AI, a privacy-focused DeFi assistant for anonymous transfers on Starknet using Typhoon Protocol.
+const SYSTEM_PROMPT = `You are Nixo AI, a knowledgeable blockchain and DeFi assistant specializing in privacy-focused anonymous transfers on Starknet using Typhoon Protocol.
 
 RESPONSE STYLE:
-- Be EXTREMELY concise - 2-3 sentences max for SIMPLE responses (balance checks, confirmations)
+- Be EXTREMELY concise - 2-3 sentences max for SIMPLE responses (balance checks, confirmations, general questions)
 - For DEVELOPER/INTEGRATION questions: Provide FULL detailed code examples and explanations
 - Use emojis sparingly (only for key concepts)
 - Get straight to the point
+- Be friendly and educational
 
-CAPABILITIES:
+CORE CAPABILITIES:
 - Check balances (STRK, USDC, USDT)
 - Execute private transfers via Typhoon
 - Explain Typhoon Protocol with FULL code examples
+
+GENERAL KNOWLEDGE:
+- Answer questions about blockchain technology, cryptocurrencies, DeFi, Web3, and related tech topics
+- Explain concepts like Bitcoin, Ethereum, smart contracts, NFTs, Layer 2s, etc.
+- Provide educational content about privacy, security, and best practices
+- When answering general questions, keep responses concise (2-4 sentences) unless more detail is requested
 
 TRANSFER FLOW:
 When user requests transfer (e.g., "Send 10 USDC to 0x..."):
@@ -169,7 +176,6 @@ Token addresses (Starknet Mainnet):
 
 REMEMBER: For simple queries, be brief. For developer/integration questions, show FULL code examples.`;
 
-
 export async function generateAIResponse(
   userMessage: string,
   walletAddress?: string,
@@ -177,7 +183,10 @@ export async function generateAIResponse(
 ): Promise<AIResponse> {
   try {
     const contextMessage = walletAddress
-      ? `User's wallet: ${walletAddress}\nCurrent balances: ${balances?.map((b) => `${b.token}: ${b.balance}`).join(", ") || "Not available"}\n\nUser message: ${userMessage}`
+      ? `User's wallet: ${walletAddress}\nCurrent balances: ${
+          balances?.map((b) => `${b.token}: ${b.balance}`).join(", ") ||
+          "Not available"
+        }\n\nUser message: ${userMessage}`
       : `User message: ${userMessage}`;
 
     const completion = await openai.chat.completions.create({
@@ -190,7 +199,9 @@ export async function generateAIResponse(
       max_tokens: 1000,
     });
 
-    const aiMessage = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process that request.";
+    const aiMessage =
+      completion.choices[0]?.message?.content ||
+      "I'm sorry, I couldn't process that request.";
 
     // Extract transaction intent
     const intent = extractTransactionIntent(userMessage, aiMessage);
@@ -202,7 +213,8 @@ export async function generateAIResponse(
   } catch (error) {
     console.error("AI generation error:", error);
     return {
-      message: "I'm having trouble processing your request right now. Please try again.",
+      message:
+        "I'm having trouble processing your request right now. Please try again.",
       intent: { type: "none", confidence: 0 },
     };
   }
@@ -215,7 +227,10 @@ export async function* streamAIResponse(
 ): AsyncGenerator<string, TransactionIntent, undefined> {
   try {
     const contextMessage = walletAddress
-      ? `User's wallet: ${walletAddress}\nCurrent balances: ${balances?.map((b) => `${b.token}: ${b.balance}`).join(", ") || "Not available"}\n\nUser message: ${userMessage}`
+      ? `User's wallet: ${walletAddress}\nCurrent balances: ${
+          balances?.map((b) => `${b.token}: ${b.balance}`).join(", ") ||
+          "Not available"
+        }\n\nUser message: ${userMessage}`
       : `User message: ${userMessage}`;
 
     const stream = await openai.chat.completions.create({
@@ -271,7 +286,9 @@ function extractTransactionIntent(
 
   if (hasTransferKeyword) {
     // Extract amount
-    const amountMatch = userMessage.match(/(\d+(?:\.\d+)?)\s*(strk|usdc|usdt)/i);
+    const amountMatch = userMessage.match(
+      /(\d+(?:\.\d+)?)\s*(strk|usdc|usdt)/i
+    );
     const amount = amountMatch ? parseFloat(amountMatch[1]) : undefined;
 
     // Extract token

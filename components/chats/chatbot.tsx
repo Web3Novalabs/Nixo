@@ -21,7 +21,7 @@ export default function Chatbot({
   walletAddress,
   balances,
 }: ChatbotProps) {
-  const { messages, isLoading, addMessage } = useMessages({
+  const { messages, isLoading, addMessage, currentIntent } = useMessages({
     isConnected: walletConnected,
     walletAddress,
     balances,
@@ -31,6 +31,7 @@ export default function Chatbot({
   // const [showTransactionPreview, setShowTransactionPreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastIntentIdRef = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -85,7 +86,7 @@ export default function Chatbot({
           </div>
         )}
 
-        {messages.map((message, idx) => (
+        {messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${
@@ -131,7 +132,10 @@ export default function Chatbot({
                         );
                       },
                       pre: ({ node, ...props }) => (
-                        <pre {...props} className="bg-slate-900/50 p-3 rounded-lg overflow-x-auto my-2" />
+                        <pre
+                          {...props}
+                          className="bg-slate-900/50 p-3 rounded-lg overflow-x-auto my-2"
+                        />
                       ),
                     }}
                   >

@@ -30,7 +30,9 @@ export function useMessages(context: MessageContext) {
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [currentIntent, setCurrentIntent] = useState<TransactionIntent | null>(null);
+  const [currentIntent, setCurrentIntent] = useState<TransactionIntent | null>(
+    null
+  );
 
   const addMessage = useCallback(
     async (userInput: string) => {
@@ -47,17 +49,9 @@ export function useMessages(context: MessageContext) {
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
-      // Create placeholder for streaming message
+      // Create ID for the assistant message (will be added when content arrives)
       const assistantMessageId = (Date.now() + 1).toString();
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        type: "assistant",
-        content: "",
-        timestamp: new Date(),
-        streaming: true,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      let assistantMessageAdded = false;
 
       try {
         // Use balances from context (already fetched via useTokenBalances hook)
@@ -98,25 +92,38 @@ export function useMessages(context: MessageContext) {
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const data = line.slice(6);
-              
+
               if (data === "[DONE]") {
                 break;
               }
 
               try {
                 const parsed = JSON.parse(data);
-                
+
                 if (parsed.content) {
                   fullContent += parsed.content;
-                  
-                  // Update message with streaming content
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: fullContent }
-                        : msg
-                    )
-                  );
+
+                  // Add assistant message on first content chunk
+                  if (!assistantMessageAdded) {
+                    const assistantMessage: Message = {
+                      id: assistantMessageId,
+                      type: "assistant",
+                      content: fullContent,
+                      timestamp: new Date(),
+                      streaming: true,
+                    };
+                    setMessages((prev) => [...prev, assistantMessage]);
+                    assistantMessageAdded = true;
+                  } else {
+                    // Update message with streaming content
+                    setMessages((prev) =>
+                      prev.map((msg) =>
+                        msg.id === assistantMessageId
+                          ? { ...msg, content: fullContent }
+                          : msg
+                      )
+                    );
+                  }
                 }
 
                 if (parsed.intent) {
@@ -130,35 +137,49 @@ export function useMessages(context: MessageContext) {
           }
         }
 
-        // Mark streaming as complete
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? { ...msg, streaming: false }
-              : msg
-          )
-        );
+        // Mark streaming as complete (only if message was added)
+        if (assistantMessageAdded) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId ? { ...msg, streaming: false } : msg
+            )
+          );
+        }
 
         // Handle transaction intent if present
         if (intent && intent.type === "transfer" && intent.confidence > 0.7) {
           // Transaction will be handled by the chatbot component
           console.log("Transaction intent detected:", intent);
         }
-
       } catch (error) {
         console.error("Message error:", error);
-        
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? {
-                  ...msg,
-                  content: "Sorry, I encountered an error processing your request. Please try again.",
-                  streaming: false,
-                }
-              : msg
-          )
-        );
+
+        // Add error message if assistant message wasn't added yet
+        if (!assistantMessageAdded) {
+          const errorMessage: Message = {
+            id: assistantMessageId,
+            type: "assistant",
+            content:
+              "Sorry, I encountered an error processing your request. Please try again.",
+            timestamp: new Date(),
+            streaming: false,
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+        } else {
+          // Update existing message with error
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    content:
+                      "Sorry, I encountered an error processing your request. Please try again.",
+                    streaming: false,
+                  }
+                : msg
+            )
+          );
+        }
 
         toast.error("Failed to process your message", {
           description: "Please try again or rephrase your request.",

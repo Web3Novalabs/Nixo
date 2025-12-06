@@ -1,5 +1,5 @@
 import { TyphoonSDK } from "typhoon-sdk";
-import { Account } from "starknet";
+import type { AccountInterface } from "starknet";
 import { TOKEN_ADDRESSES, TOKEN_DECIMALS, type TokenSymbol } from "./tokens";
 
 export interface TransferParams {
@@ -35,7 +35,7 @@ export class TyphoonService {
    * Execute a private transfer using Typhoon Protocol
    */
   async executeTransfer(
-    account: Account,
+    account: AccountInterface,
     params: TransferParams,
     onStatusChange?: (status: TransferStatus, message: string) => void
   ): Promise<TransferResult> {
@@ -72,10 +72,7 @@ export class TyphoonService {
       await this.sdk.download_notes(txHash);
 
       // Step 4: Wait for confirmation
-      onStatusChange?.(
-        "confirming",
-        "Waiting for transaction confirmation..."
-      );
+      onStatusChange?.("confirming", "Waiting for transaction confirmation...");
       await account.waitForTransaction(txHash);
 
       // Step 5: Withdraw to recipient
@@ -108,7 +105,10 @@ export class TyphoonService {
   /**
    * Validate transfer parameters
    */
-  validateTransfer(params: TransferParams, balance: number): {
+  validateTransfer(
+    params: TransferParams,
+    balance: number
+  ): {
     valid: boolean;
     error?: string;
   } {
