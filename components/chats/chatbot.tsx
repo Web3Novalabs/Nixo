@@ -112,18 +112,24 @@ export default function Chatbot({
                           className="text-purple-400 hover:text-purple-300 underline"
                         />
                       ),
-                      code: ({ node, inline, ...props }) =>
-                        inline ? (
+                      code: ({ node, className, children, ...props }) => {
+                        const inline = !className;
+                        return inline ? (
                           <code
                             {...props}
                             className="bg-slate-900/50 px-1.5 py-0.5 rounded text-purple-300 font-mono text-xs"
-                          />
+                          >
+                            {children}
+                          </code>
                         ) : (
                           <code
                             {...props}
                             className="block bg-slate-900/50 p-3 rounded-lg overflow-x-auto font-mono text-xs my-2"
-                          />
-                        ),
+                          >
+                            {children}
+                          </code>
+                        );
+                      },
                       pre: ({ node, ...props }) => (
                         <pre {...props} className="bg-slate-900/50 p-3 rounded-lg overflow-x-auto my-2" />
                       ),
