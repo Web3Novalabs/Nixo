@@ -1,5 +1,5 @@
 import { TyphoonSDK } from "typhoon-sdk";
-import { Account } from "starknet";
+import { Account, RpcProvider, AccountInterface } from "starknet";
 import { TOKEN_ADDRESSES, TOKEN_DECIMALS, type TokenSymbol } from "./tokens";
 
 export interface TransferParams {
@@ -8,37 +8,31 @@ export interface TransferParams {
   recipient: string;
 }
 
-export interface TransferResult {
-  success: boolean;
-  txHash?: string;
-  error?: string;
-}
-
-export type TransferStatus =
-  | "idle"
-  | "generating"
-  | "signing"
-  | "downloading"
-  | "confirming"
-  | "withdrawing"
-  | "success"
-  | "error";
+export type TransferStatus = "generating" | "signing" | "downloading" | "confirming" | "withdrawing" | "success" | "error";
 
 export class TyphoonService {
   private sdk: TyphoonSDK;
+  private provider: RpcProvider;
 
   constructor() {
     this.sdk = new TyphoonSDK();
+    this.provider = new RpcProvider({
+      nodeUrl: process.env.NEXT_PUBLIC_STARKNET_RPC_URL || "https://starknet-mainnet.public.blastapi.io/rpc/v0_8",
+    });
   }
 
   /**
    * Execute a private transfer using Typhoon Protocol
    */
   async executeTransfer(
-    account: Account,
-    params: TransferParams,
+    account: AccountInterface,
+    params: {
+      amount: number;
+      token: TokenSymbol;
+      recipient: string;
+    },
     onStatusChange?: (status: TransferStatus, message: string) => void
-  ): Promise<TransferResult> {
+  ): Promise<{ success: boolean; txHash?: string; error?: any }> {
     try {
       const { amount, token, recipient } = params;
 

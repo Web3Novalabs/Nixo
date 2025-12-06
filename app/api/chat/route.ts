@@ -21,18 +21,20 @@ export async function POST(req: NextRequest) {
           const aiStream = streamAIResponse(message, walletAddress, balances);
           let intent: any = null;
           
-          for await (const chunk of aiStream) {
-            const data = JSON.stringify({ content: chunk });
+          while (true) {
+            const { done, value } = await aiStream.next();
+            
+            if (done) {
+              intent = value;
+              if (intent) {
+                const intentData = JSON.stringify({ intent });
+                controller.enqueue(encoder.encode(`data: ${intentData}\n\n`));
+              }
+              break;
+            }
+            
+            const data = JSON.stringify({ content: value });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-          }
-
-          // The generator returns the intent when it's done
-          // We need to manually call next() one more time to get the return value
-          const finalResult = await aiStream.next();
-          if (finalResult.done && finalResult.value) {
-            intent = finalResult.value;
-            const intentData = JSON.stringify({ intent });
-            controller.enqueue(encoder.encode(`data: ${intentData}\n\n`));
           }
 
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));

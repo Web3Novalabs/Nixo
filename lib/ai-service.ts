@@ -241,9 +241,9 @@ export async function* streamAIResponse(
     // Extract intent from complete message
     const intent = extractTransactionIntent(userMessage, fullMessage);
     return intent;
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI streaming error:", error);
-    yield "I'm having trouble processing your request right now. Please try again.";
+    yield `I'm having trouble processing your request. Error: ${error?.message || "Unknown error"}`;
     return { type: "none", confidence: 0 };
   }
 }
@@ -271,14 +271,14 @@ function extractTransactionIntent(
 
   if (hasTransferKeyword) {
     // Extract amount
-    const amountMatch = userMessage.match(/(\d+(?:\.\d+)?)\s*(strk|usdc|usdt)/i);
+    const amountMatch = userMessage.match(/(\d+(?:\.\d+)?)\s*([a-zA-Z]{2,6})?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : undefined;
 
     // Extract token
-    const tokenMatch = userMessage.match(/\b(strk|usdc|usdt)\b/i);
-    const token = tokenMatch
-      ? (tokenMatch[1].toUpperCase() as TokenSymbol)
-      : undefined;
+    // Look for token symbol either after amount or standalone
+    const tokenMatch = userMessage.match(/\b([a-zA-Z]{2,6})\b/i);
+    // We cast to TokenSymbol here but validation will happen in the UI
+    const token = (amountMatch?.[2] || tokenMatch?.[1])?.toUpperCase() as TokenSymbol | undefined;
 
     // Extract recipient address
     const addressMatch = userMessage.match(/0x[a-fA-F0-9]{63,64}/);

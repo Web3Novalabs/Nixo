@@ -16,7 +16,7 @@ import Chatbot from "@/components/chats/chatbot";
 import { useTokenBalances } from "@/hooks/use-token-balances";
 
 export default function AppPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, account } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { balances } = useTokenBalances();
@@ -142,6 +142,7 @@ export default function AppPage() {
             walletConnected={isConnected || false}
             walletAddress={address}
             balances={balances}
+            account={account}
           />
         </div>
       </main>
