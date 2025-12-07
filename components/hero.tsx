@@ -1,12 +1,14 @@
 "use client";
 
 import { ArrowRight, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+
+import StarBackground from "@/components/ui/star-background";
 
 export default function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-border/50">
+      <StarBackground />
       <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-transparent to-transparent pointer-events-none" />
       <div className="absolute top-0 right-1/4 w-[600px] h-[600px] rounded-full blur-3xl bg-gradient-to-br from-primary/15 to-accent/5 opacity-50 animate-pulse" />
       <div className="absolute bottom-0 left-1/3 w-[500px] h-[500px] rounded-full blur-3xl bg-gradient-to-tr from-secondary/10 to-transparent opacity-40" />
@@ -22,7 +24,7 @@ export default function Hero() {
 
           <div>
             <h1 className="text-6xl sm:text-7xl lg:text-8xl font-bold tracking-tighter text-balance leading-tight">
-              Send Crypto.
+              Send & Swap.
               <span className="block bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent animate-gradient">
                 Stay Anonymous.
               </span>
@@ -31,7 +33,7 @@ export default function Hero() {
           </div>
 
           <p className="text-lg sm:text-xl text-foreground/70 max-w-3xl mx-auto text-balance leading-relaxed">
-            Natural-language AI makes private, gasless crypto transfers as easy
+            Natural-language AI makes private transfers and token swaps as easy
             as texting. Powered by Typhoon Protocol, Starknet, and AVNU
             Paymaster.
           </p>

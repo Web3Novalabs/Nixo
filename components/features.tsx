@@ -8,6 +8,7 @@ import {
   Download,
   Wallet,
   CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 
 const features = [
@@ -42,6 +43,13 @@ const features = [
     title: "Auto-Backup Notes",
     description:
       "Automatically download transaction notes. Recover interrupted transfers anytime.",
+  },
+  {
+    icon: RefreshCw,
+    title: "Instant Token Swaps",
+    description:
+      "Swap ETH, STRK, USDC, and USDT instantly. AI finds the best rates via AVNU aggregator.",
+    highlight: true,
   },
   {
     icon: Wallet,

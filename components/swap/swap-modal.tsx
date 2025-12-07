@@ -9,10 +9,11 @@ import {
   fetchSwapQuote,
   executeSwapTransaction,
   formatTokenAmount,
+  getTokenDecimals,
 } from "@/lib/avnu-service";
 import type { SwapQuote } from "@/lib/avnu-service";
-import { TOKEN_ADDRESSES } from "@/lib/tokens";
-import TokenInput from "./token-input";
+import { TOKEN_ADDRESSES, type TokenSymbol } from "@/lib/tokens";
+import TokenSelector from "./token-selector";
 import { toast } from "sonner";
 
 interface SwapModalProps {
@@ -28,20 +29,22 @@ export default function SwapModal({
   account,
   address,
 }: SwapModalProps) {
+  const [sellToken, setSellToken] = useState<TokenSymbol>("ETH");
+  const [buyToken, setBuyToken] = useState<TokenSymbol>("STRK");
   const [sellAmount, setSellAmount] = useState("");
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [swapping, setSwapping] = useState(false);
 
-  // Fetch ETH balance
-  const { data: ethBalance } = useBalance({
+  // Fetch sell token balance
+  const { data: sellBalance } = useBalance({
     address: address as `0x${string}`,
-    token: TOKEN_ADDRESSES.ETH as `0x${string}`,
+    token: TOKEN_ADDRESSES[sellToken] as `0x${string}`,
     refetchInterval: 10000,
     watch: true,
   });
 
-  // Fetch quote when sell amount changes
+  // Fetch quote when sell amount or tokens change
   useEffect(() => {
     const fetchQuote = async () => {
       if (!sellAmount || parseFloat(sellAmount) <= 0 || !address) {
@@ -52,8 +55,8 @@ export default function SwapModal({
       setLoading(true);
       try {
         const quoteResult = await fetchSwapQuote({
-          sellToken: "ETH",
-          buyToken: "STRK",
+          sellToken,
+          buyToken,
           sellAmount: parseFloat(sellAmount),
           takerAddress: address,
         });
@@ -69,7 +72,7 @@ export default function SwapModal({
 
     const timer = setTimeout(fetchQuote, 500);
     return () => clearTimeout(timer);
-  }, [sellAmount, address]);
+  }, [sellAmount, sellToken, buyToken, address]);
 
   // Execute swap
   const handleSwap = async () => {
@@ -133,44 +136,86 @@ export default function SwapModal({
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Sell Input (ETH) */}
-          <TokenInput
-            label="Sell"
-            value={sellAmount}
-            onChange={setSellAmount}
-            token="ETH"
-            balance={
-              ethBalance
-                ? parseFloat(ethBalance.formatted).toFixed(4)
-                : undefined
-            }
-            loading={loading}
+          {/* Sell Token Selector */}
+          <TokenSelector
+            selectedToken={sellToken}
+            onSelect={setSellToken}
+            label="From"
+            excludeToken={buyToken}
           />
 
-          {/* Divider Arrow */}
-          <div className="flex justify-center -my-2 relative z-10">
-            <div className="bg-slate-800 border border-purple-500/30 p-1.5 rounded-full shadow-sm text-purple-400">
-              <ArrowDown size={16} />
+          {/* Sell Amount Input */}
+          <div className="bg-slate-800/50 p-4 rounded-xl border border-purple-500/20">
+            <div className="flex justify-between text-xs text-slate-400 mb-2 uppercase font-semibold tracking-wider">
+              <span>Amount</span>
+              {sellBalance && (
+                <span>
+                  Balance:{" "}
+                  {parseFloat(sellBalance.formatted).toFixed(
+                    sellToken === "ETH" ? 4 : 2
+                  )}
+                </span>
+              )}
             </div>
+            <input
+              type="number"
+              value={sellAmount}
+              onChange={(e) => setSellAmount(e.target.value)}
+              placeholder="0.0"
+              className="bg-transparent text-2xl font-mono outline-none w-full placeholder:text-slate-600 text-white cursor-text"
+            />
+            {loading && (
+              <div className="mt-2 text-xs text-purple-400 animate-pulse">
+                Fetching quote...
+              </div>
+            )}
           </div>
 
-          {/* Buy Output (STRK) */}
-          <TokenInput
-            label="Receive (Estimated)"
-            value={
-              loading ? "" : quote ? formatTokenAmount(quote.buyAmount) : "0.0"
-            }
-            token="STRK"
-            readOnly
-            loading={loading}
+          {/* Swap Direction Button */}
+          <div className="flex justify-center -my-2 relative z-10">
+            <button
+              onClick={() => {
+                setSellToken(buyToken);
+                setBuyToken(sellToken);
+                setSellAmount("");
+                setQuote(null);
+              }}
+              className="bg-slate-800 border border-purple-500/30 p-2 rounded-full shadow-sm text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+            >
+              <ArrowDown size={16} />
+            </button>
+          </div>
+
+          {/* Buy Token Selector */}
+          <TokenSelector
+            selectedToken={buyToken}
+            onSelect={setBuyToken}
+            label="To"
+            excludeToken={sellToken}
           />
+
+          {/* Buy Amount Display */}
+          <div className="bg-slate-800/50 p-4 rounded-xl border border-purple-500/20">
+            <div className="flex justify-between text-xs text-slate-400 mb-2 uppercase font-semibold tracking-wider">
+              <span>You Receive (Estimated)</span>
+            </div>
+            <div className="text-2xl font-mono text-white">
+              {loading ? (
+                <Loader2 className="animate-spin text-slate-400" size={24} />
+              ) : quote ? (
+                formatTokenAmount(quote.buyAmount, getTokenDecimals(buyToken))
+              ) : (
+                "0.0"
+              )}
+            </div>
+          </div>
 
           {/* Rate Info */}
           {quote && !loading && (
             <div className="flex justify-between items-center text-xs text-slate-400 px-1">
               <span>Exchange Rate</span>
               <span className="text-purple-400 font-medium">
-                1 ETH ≈ {quote.rate.toFixed(2)} STRK
+                1 {sellToken} ≈ {quote.rate.toFixed(4)} {buyToken}
               </span>
             </div>
           )}
@@ -189,7 +234,7 @@ export default function SwapModal({
             ) : (
               <>
                 <RefreshCw size={18} />
-                Swap to STRK
+                Swap to {buyToken}
               </>
             )}
           </button>

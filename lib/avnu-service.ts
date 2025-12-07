@@ -1,10 +1,10 @@
 import { getQuotes, executeSwap, type Quote } from "@avnu/avnu-sdk";
 import type { AccountInterface } from "starknet";
-import { TOKEN_ADDRESSES } from "./tokens";
+import { TOKEN_ADDRESSES, type TokenSymbol } from "./tokens";
 
 export interface SwapParams {
-  sellToken: "ETH" | "STRK";
-  buyToken: "ETH" | "STRK";
+  sellToken: TokenSymbol;
+  buyToken: TokenSymbol;
   sellAmount: number; // in token units (e.g., 0.1 ETH)
   takerAddress: string;
 }
@@ -27,8 +27,11 @@ export async function fetchSwapQuote(
   try {
     const { sellToken, buyToken, sellAmount, takerAddress } = params;
 
-    // Convert to wei (18 decimals for both ETH and STRK)
-    const amountInWei = BigInt(Math.floor(sellAmount * 1e18));
+    // Get token decimals
+    const sellDecimals = getTokenDecimals(sellToken);
+    const amountInWei = BigInt(
+      Math.floor(sellAmount * Math.pow(10, sellDecimals))
+    );
 
     const quotes = await getQuotes({
       sellTokenAddress: TOKEN_ADDRESSES[sellToken],
@@ -55,6 +58,22 @@ export async function fetchSwapQuote(
   } catch (error) {
     console.error("[AVNU] Failed to fetch quote:", error);
     return null;
+  }
+}
+
+/**
+ * Get token decimals
+ */
+export function getTokenDecimals(token: TokenSymbol): number {
+  switch (token) {
+    case "ETH":
+    case "STRK":
+      return 18;
+    case "USDC":
+    case "USDT":
+      return 6;
+    default:
+      return 18;
   }
 }
 
