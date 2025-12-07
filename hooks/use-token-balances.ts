@@ -45,6 +45,17 @@ export function useTokenBalances() {
     watch: true,
   });
 
+  // Fetch ETH balance
+  const {
+    data: ethData,
+    isLoading: ethLoading,
+    error: ethError,
+  } = useBalance({
+    address,
+    token: TOKEN_ADDRESSES.ETH,
+    watch: true,
+  });
+
   const balances: TokenBalance[] = [
     {
       token: "STRK",
@@ -63,6 +74,12 @@ export function useTokenBalances() {
       balance: usdtData?.formatted || "0.00",
       loading: usdtLoading,
       error: usdtError ? usdtError.message : null,
+    },
+    {
+      token: "ETH",
+      balance: ethData?.formatted || "0.00",
+      loading: ethLoading,
+      error: ethError ? ethError.message : null,
     },
   ];
 

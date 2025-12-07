@@ -19,6 +19,7 @@ interface ChatbotProps {
   walletAddress?: string;
   balances?: { token: string; balance: string }[];
   account?: AccountInterface;
+  onSwapRequest?: () => void;
 }
 
 export default function Chatbot({
@@ -26,6 +27,7 @@ export default function Chatbot({
   walletAddress,
   balances,
   account,
+  onSwapRequest,
 }: ChatbotProps) {
   const [input, setInput] = useState("");
   const [transactionStatus, setTransactionStatus] =
@@ -192,6 +194,36 @@ export default function Chatbot({
     clearIntent,
     addAssistantMessage,
     balances,
+  ]);
+
+  // Handle Swap Intent
+  useEffect(() => {
+    if (!isLoading && currentIntent && currentIntent.type === "swap") {
+      if (!account) {
+        addAssistantMessage(
+          "⚠️ **Wallet not connected**\n\nPlease connect your wallet to swap tokens."
+        );
+        clearIntent();
+        return;
+      }
+
+      // Trigger swap modal
+      if (onSwapRequest) {
+        onSwapRequest();
+        addAssistantMessage(
+          "🔄 **Opening swap interface**\n\nI'll help you swap ETH for STRK. The swap modal is now open!"
+        );
+      }
+
+      clearIntent();
+    }
+  }, [
+    isLoading,
+    currentIntent,
+    account,
+    clearIntent,
+    addAssistantMessage,
+    onSwapRequest,
   ]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {

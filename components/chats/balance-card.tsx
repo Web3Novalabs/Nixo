@@ -26,8 +26,10 @@ export default function BalanceCard({ balances }: BalanceCardProps) {
         return "/usdcImg.png";
       case "USDT":
         return "/usdtImg.png";
+      case "ETH":
+        return "/ethImg.png";
       default:
-        return "🪙";
+        return "/strkImg.png";
     }
   };
 
@@ -86,13 +88,15 @@ export default function BalanceCard({ balances }: BalanceCardProps) {
                 </div>
                 <div className="text-right">
                   <div className="text-base font-bold text-white font-mono">
-                    {parseFloat(bal.balance).toFixed(2)}
+                    {parseFloat(bal.balance).toFixed(
+                      bal.token === "ETH" ? 4 : 2
+                    )}
                   </div>
                   <div className="text-xs text-purple-400 font-medium">
                     $
                     {(
                       parseFloat(bal.balance) * (bal.token === "STRK" ? 1 : 1)
-                    ).toFixed(2)}
+                    ).toFixed(bal.token === "ETH" ? 4 : 2)}
                   </div>
                 </div>
               </div>

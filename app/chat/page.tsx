@@ -1,13 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Wallet, LogOut, Copy, ChevronDown, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Wallet,
+  LogOut,
+  Copy,
+  ChevronDown,
+  X,
+  RefreshCw,
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
 import type { Connector } from "@starknet-react/core";
 import Chatbot from "@/components/chats/chatbot";
 import { useTokenBalances } from "@/hooks/use-token-balances";
+import SwapModal from "@/components/swap/swap-modal";
 import Image from "next/image";
 
 export default function AppPage() {
@@ -18,6 +27,7 @@ export default function AppPage() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const [showBalances, setShowBalances] = useState(false);
+  const [showSwapModal, setShowSwapModal] = useState(false);
 
   const handleConnectWallet = (connector: Connector) => {
     connect({ connector });
@@ -77,10 +87,18 @@ export default function AppPage() {
               </h1>
             </div>
 
-            {/* Right: Wallet & Balances */}
+            {/* Right: Swap, Wallet & Balances */}
             <div className="flex items-center gap-3">
               {isConnected ? (
                 <>
+                  {/* Swap Button */}
+                  <button
+                    onClick={() => setShowSwapModal(true)}
+                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 transition-all text-white text-sm font-semibold cursor-pointer"
+                  >
+                    <RefreshCw size={14} />
+                    <span>Swap</span>
+                  </button>
                   {/* Balances Dropdown */}
                   <div className="relative">
                     <button
@@ -116,6 +134,8 @@ export default function AppPage() {
                                 return "from-blue-500 to-cyan-500";
                               case "USDT":
                                 return "from-green-500 to-emerald-500";
+                              case "ETH":
+                                return "from-black-500 to-black-200";
                               default:
                                 return "from-slate-500 to-slate-600";
                             }
@@ -129,8 +149,10 @@ export default function AppPage() {
                                 return "/usdcImg.png";
                               case "USDT":
                                 return "/usdtImg.png";
+                              case "ETH":
+                                return "/ethImg.png";
                               default:
-                                return "🪙";
+                                return "/strk.png";
                             }
                           };
 
@@ -166,14 +188,16 @@ export default function AppPage() {
                                 </div>
                                 <div className="text-right">
                                   <div className="text-lg font-bold text-white font-mono">
-                                    {parseFloat(bal.balance).toFixed(2)}
+                                    {parseFloat(bal.balance).toFixed(
+                                      bal.token === "ETH" ? 4 : 2
+                                    )}
                                   </div>
                                   <div className="text-xs text-purple-400 font-medium">
                                     $
                                     {(
                                       parseFloat(bal.balance) *
                                       (bal.token === "STRK" ? 1 : 1)
-                                    ).toFixed(2)}{" "}
+                                    ).toFixed(bal.token === "ETH" ? 4 : 2)}
                                   </div>
                                 </div>
                               </div>
@@ -232,6 +256,7 @@ export default function AppPage() {
             walletAddress={address}
             balances={balances}
             account={account}
+            onSwapRequest={() => setShowSwapModal(true)}
           />
         </div>
       </main>
@@ -338,6 +363,14 @@ export default function AppPage() {
           </div>
         </div>
       )}
+
+      {/* Swap Modal */}
+      <SwapModal
+        isOpen={showSwapModal}
+        onClose={() => setShowSwapModal(false)}
+        account={account}
+        address={address}
+      />
     </div>
   );
 }

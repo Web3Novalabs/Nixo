@@ -6,7 +6,7 @@ const openai = new OpenAI({
 });
 
 export interface TransactionIntent {
-  type: "transfer" | "balance" | "status" | "help" | "none";
+  type: "transfer" | "swap" | "balance" | "status" | "help" | "none";
   amount?: number;
   token?: TokenSymbol;
   recipient?: string;
@@ -23,6 +23,7 @@ const SYSTEM_PROMPT = `You are Nixo AI, a helpful assistant for the Typhoon Prot
 **Your Role:**
 - Help users understand Typhoon Protocol and private transfers
 - Guide users through anonymous transactions
+- Help users swap tokens (ETH ↔ STRK)
 - Answer questions about Starknet, DeFi, and crypto
 - Be friendly, concise, and helpful
 
@@ -34,20 +35,26 @@ const SYSTEM_PROMPT = `You are Nixo AI, a helpful assistant for the Typhoon Prot
    - USDC: X.XX
    - USDT: X.XX
 
+**Swap Detection:**
+When a user wants to swap tokens (e.g., "swap 0.1 ETH to STRK", "exchange ETH for STRK", "convert 0.5 ETH"):
+- Acknowledge the swap request
+- Confirm: "I'll help you swap [amount] ETH to STRK"
+- The system will open the swap interface automatically
+
 **Transaction Detection:**
 When a user wants to send/transfer tokens, extract:
 - Amount (number)
 - Token (STRK, USDC, or USDT)
 - Recipient address (0x...)
 
-**Supported Tokens:**
-- STRK (Starknet Token)
-- USDC (USD Coin)
-- USDT (Tether USD)
+**Supported Features:**
+- **Private Transfers**: STRK, USDC, USDT (minimum 10 tokens)
+- **Token Swaps**: ETH ↔ STRK via AVNU
+- **Balance Checks**: All supported tokens
 
 **Key Features:**
-- Minimum transfer: 10 tokens
-- Private & anonymous transfers
+- Private & anonymous transfers via Typhoon Protocol
+- Token swaps via AVNU
 - Powered by zero-knowledge proofs
 - No transaction history on-chain
 
@@ -289,36 +296,29 @@ function extractTransactionIntent(
   aiResponse: string
 ): TransactionIntent {
   const lowerMessage = userMessage.toLowerCase();
+  const lowerResponse = aiResponse.toLowerCase();
 
-  // Check for balance inquiry
-  if (
-    lowerMessage.includes("balance") ||
-    lowerMessage.includes("how much") ||
-    lowerMessage.includes("check")
-  ) {
-    return { type: "balance", confidence: 0.9 };
+  // Check for swap intent first
+  const swapIntent = extractSwapIntent(userMessage, aiResponse);
+  if (swapIntent.type === "swap") {
+    return swapIntent;
   }
 
   // Check for transfer intent
-  const transferKeywords = ["send", "transfer", "pay", "gift"];
-  const hasTransferKeyword = transferKeywords.some((keyword) =>
-    lowerMessage.includes(keyword)
-  );
-
-  if (hasTransferKeyword) {
+  if (
+    lowerMessage.includes("send") ||
+    lowerMessage.includes("transfer") ||
+    lowerResponse.includes("sending") ||
+    lowerResponse.includes("transfer")
+  ) {
     // Extract amount
-    const amountMatch = userMessage.match(
-      /(\d+(?:\.\d+)?)\s*([a-zA-Z]{2,6})?/i
-    );
-    const amount = amountMatch ? parseFloat(amountMatch[1]) : undefined;
+    const amountMatch = userMessage.match(/(\d+\.?\d*)\s*(strk|usdc|usdt)/i);
+    if (!amountMatch) {
+      return { type: "none", confidence: 0 };
+    }
 
-    // Extract token
-    // Look for token symbol either after amount or standalone
-    const tokenMatch = userMessage.match(/\b([a-zA-Z]{2,6})\b/i);
-    // We cast to TokenSymbol here but validation will happen in the UI
-    const token = (amountMatch?.[2] || tokenMatch?.[1])?.toUpperCase() as
-      | TokenSymbol
-      | undefined;
+    const amount = parseFloat(amountMatch[1]);
+    const token = amountMatch[2].toUpperCase() as TokenSymbol;
 
     // Extract recipient address
     const addressMatch = userMessage.match(/0x[a-fA-F0-9]{63,64}/);
@@ -365,4 +365,41 @@ function extractTransactionIntent(
   }
 
   return { type: "none", confidence: 0.5 };
+}
+
+function extractSwapIntent(
+  userMessage: string,
+  aiResponse: string
+): TransactionIntent {
+  const lowerMessage = userMessage.toLowerCase();
+  const lowerResponse = aiResponse.toLowerCase();
+
+  // Check for swap keywords
+  const swapKeywords = ["swap", "exchange", "convert", "trade"];
+  const hasSwapKeyword = swapKeywords.some(
+    (keyword) =>
+      lowerMessage.includes(keyword) || lowerResponse.includes(keyword)
+  );
+
+  if (!hasSwapKeyword) {
+    return { type: "none", confidence: 0 };
+  }
+
+  // Check for ETH/STRK mentions
+  const hasEth = lowerMessage.includes("eth");
+  const hasStrk = lowerMessage.includes("strk");
+
+  if (!hasEth && !hasStrk) {
+    return { type: "none", confidence: 0 };
+  }
+
+  // Extract amount (optional)
+  const amountMatch = userMessage.match(/(\d+\.?\d*)\s*(eth|strk)?/i);
+  const amount = amountMatch ? parseFloat(amountMatch[1]) : undefined;
+
+  return {
+    type: "swap",
+    amount,
+    confidence: 0.85,
+  };
 }
